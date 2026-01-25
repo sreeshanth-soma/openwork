@@ -98,12 +98,6 @@ export default function TaskInputBar({
   // Process files
   const processFiles = async (files: File[]) => {
     setError(null);
-    
-    // Validate file count
-    if (attachments.length + files.length > 5) {
-      setError('Maximum 5 files allowed');
-      return;
-    }
 
     const newAttachments: FileAttachment[] = [];
 
@@ -160,7 +154,14 @@ export default function TaskInputBar({
       });
     }
 
-    setAttachments([...attachments, ...newAttachments]);
+    // Validate total file count after filtering invalid files
+    setAttachments(prev => {
+      if (prev.length + newAttachments.length > 5) {
+        setError('Maximum 5 files allowed');
+        return prev;
+      }
+      return [...prev, ...newAttachments];
+    });
   };
 
   // Drag handlers
