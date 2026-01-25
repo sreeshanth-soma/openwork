@@ -44,9 +44,26 @@ export interface Task {
 }
 
 export interface TaskAttachment {
-  type: 'screenshot' | 'json';
-  data: string; // base64 for images, JSON string for data
+  type: 'screenshot' | 'json' | 'image' | 'text' | 'code' | 'pdf' | 'other';
+  data: string; // base64 for images/files, JSON string for data
   label?: string; // e.g., "Screenshot after clicking Submit"
+  // Additional fields for file attachments
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+}
+
+/**
+ * File attachment for UI state (before converting to TaskAttachment)
+ */
+export interface FileAttachment {
+  id: string;
+  name: string;
+  path: string;
+  type: 'image' | 'text' | 'code' | 'pdf' | 'other';
+  preview?: string; // base64 data URL for images, text content for text files
+  size: number;
+  mimeType: string;
 }
 
 export interface TaskMessage {
