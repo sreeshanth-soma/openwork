@@ -45,6 +45,7 @@ export default function TaskInputBar({
   const isDisabled = disabled || isLoading;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pendingAutoSubmitRef = useRef<string | null>(null);
+  const dragCounterRef = useRef(0);
   const accomplish = getAccomplish();
   
   const [dragOver, setDragOver] = useState(false);
@@ -221,7 +222,10 @@ export default function TaskInputBar({
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragOver(true);
+    dragCounterRef.current++;
+    if (dragCounterRef.current === 1) {
+      setDragOver(true);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -232,8 +236,8 @@ export default function TaskInputBar({
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Only set dragOver to false if we're leaving the container itself
-    if (e.currentTarget === e.target) {
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
       setDragOver(false);
     }
   };
@@ -241,29 +245,36 @@ export default function TaskInputBar({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    dragCounterRef.current = 0;
     setDragOver(false);
 
-    // Filter out directories using webkitGetAsEntry
-    const items = Array.from(e.dataTransfer.items);
-    const files: File[] = [];
+    let files: File[] = [];
     let hasFolder = false;
-    
-    for (const item of items) {
-      if (item.kind === 'file') {
-        const entry = item.webkitGetAsEntry?.();
-        // Check if it's a directory
-        if (entry?.isDirectory) {
-          hasFolder = true;
-          continue;
-        }
-        // Only add files, not directories
-        if (!entry || entry.isFile) {
-          const file = item.getAsFile();
-          if (file) {
-            files.push(file);
+
+    // Try to use items API for better folder detection
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      const items = Array.from(e.dataTransfer.items);
+      
+      for (const item of items) {
+        if (item.kind === 'file') {
+          const entry = item.webkitGetAsEntry?.();
+          // Check if it's a directory
+          if (entry?.isDirectory) {
+            hasFolder = true;
+            continue;
+          }
+          // Only add files, not directories
+          if (!entry || entry.isFile) {
+            const file = item.getAsFile();
+            if (file) {
+              files.push(file);
+            }
           }
         }
       }
+    } else {
+      // Fallback to files API (for test environment or older browsers)
+      files = Array.from(e.dataTransfer.files);
     }
 
     // Show error if user tried to drop folders
@@ -325,10 +336,10 @@ export default function TaskInputBar({
 
       {/* Input container */}
       <div
-        className={`relative flex flex-col gap-2 rounded-xl border bg-background px-3 py-2.5 shadow-sm transition-all duration-200 ease-accomplish focus-within:border-ring focus-within:ring-1 focus-within:ring-ring ${
+        className={`relative flex flex-col gap-2 rounded-xl bg-background px-3 py-2.5 shadow-sm transition-all duration-200 ease-accomplish ${
           dragOver
-            ? 'border-dashed border-2 border-primary bg-primary/5'
-            : 'border-border'
+            ? 'border-2 border-dashed border-primary bg-primary/5'
+            : 'border border-border focus-within:border-ring focus-within:ring-1 focus-within:ring-ring'
         }`}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
@@ -397,7 +408,6 @@ export default function TaskInputBar({
               <div
                 key={attachment.id}
                 className="group relative flex items-center gap-2 rounded-lg border border-border bg-background/50 px-3 py-1.5 text-sm transition-all hover:border-primary/50 hover:bg-background"
-                title={`${attachment.name} (${formatFileSize(attachment.size)})`}
               >
                 {getFileIcon(attachment.type)}
                 <span className="max-w-[150px] truncate">{attachment.name}</span>
@@ -411,6 +421,23 @@ export default function TaskInputBar({
                 >
                   <X className="h-3 w-3" />
                 </button>
+                {/* Preview tooltip on hover */}
+                {attachment.preview && (
+                  <div className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 hidden max-h-[200px] max-w-[300px] overflow-hidden rounded-lg border border-border bg-popover p-2 shadow-lg group-hover:block">
+                    {attachment.type === 'image' ? (
+                      <img
+                        src={attachment.preview}
+                        alt={attachment.name}
+                        className="max-h-[180px] max-w-full rounded object-contain"
+                      />
+                    ) : (
+                      <pre className="max-h-[180px] overflow-auto whitespace-pre-wrap break-words text-xs text-muted-foreground">
+                        {attachment.preview.substring(0, 500)}
+                        {attachment.preview.length > 500 && '...'}
+                      </pre>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

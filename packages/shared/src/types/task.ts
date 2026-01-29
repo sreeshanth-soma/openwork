@@ -27,6 +27,8 @@ export interface TaskConfig {
   outputSchema?: object;
   /** Session ID for resuming */
   sessionId?: string;
+  /** File attachments from drag-and-drop */
+  attachments?: FileAttachment[];
 }
 
 export interface Task {
@@ -44,8 +46,8 @@ export interface Task {
 }
 
 export interface TaskAttachment {
-  type: 'screenshot' | 'json' | 'image' | 'text' | 'code' | 'pdf' | 'other';
-  data: string; // base64 for images/files, JSON string for data
+  type: 'screenshot' | 'json' | 'image' | 'text' | 'document' | 'other';
+  data: string; // base64 for images/files, JSON string for data, file path for documents
   label?: string; // e.g., "Screenshot after clicking Submit"
   // Additional fields for file attachments
   fileName?: string;
